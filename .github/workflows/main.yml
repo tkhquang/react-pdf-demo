@@ -1,0 +1,44 @@
+name: Generate resume
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions: write-all
+
+jobs:
+  generate_pdf:
+    name: Generate resume
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/cache@master
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+      - run: |
+          yarn install
+          yarn compile
+      - uses: actions/cache@master
+        with:
+          path: dist/cache
+          key: ${{ runner.os }}-cache-${{ hashFiles('yarn.lock') }}
+      - name: Commit files
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git status
+          git add .
+          git commit -a -m "Update resume [ci skip]"
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.head_ref }}
